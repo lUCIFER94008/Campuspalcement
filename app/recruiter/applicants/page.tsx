@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/sidebar';
-import { Search, CheckCircle2, UserCheck } from 'lucide-react';
+import { Search, CheckCircle2, UserCheck, Award } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ApplicantManagementPage() {
@@ -10,7 +10,7 @@ export default function ApplicantManagementPage() {
   const [applicants, setApplicants] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('ALL');
-  const [tabFilter, setTabFilter] = useState<'PENDING' | 'SHORTLISTED' | 'ALL'>('PENDING');
+  const [tabFilter, setTabFilter] = useState<'PENDING' | 'SHORTLISTED' | 'SELECTED' | 'ALL'>('PENDING');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,7 +41,9 @@ export default function ApplicantManagementPage() {
         );
         toast.success(
           newStatus === 'SHORTLISTED'
-            ? 'Candidate shortlisted successfully. Moved to Interviews pipeline!'
+            ? 'Candidate shortlisted successfully!'
+            : newStatus === 'SELECTED'
+            ? 'Candidate selected successfully! Selection letter is now available to the student.'
             : `Application status set to ${newStatus}`
         );
       } else {
@@ -67,7 +69,9 @@ export default function ApplicantManagementPage() {
     if (tabFilter === 'PENDING') {
       matchTab = statusUpper === 'APPLIED' || statusUpper === 'UNDER REVIEW' || statusUpper === 'UNDER_REVIEW';
     } else if (tabFilter === 'SHORTLISTED') {
-      matchTab = statusUpper === 'SHORTLISTED' || statusUpper === 'INTERVIEW';
+      matchTab = statusUpper === 'SHORTLISTED';
+    } else if (tabFilter === 'SELECTED') {
+      matchTab = statusUpper === 'SELECTED' || statusUpper === 'PLACED';
     }
 
     return matchSearch && matchDept && matchTab;
@@ -84,7 +88,7 @@ export default function ApplicantManagementPage() {
               Applicant Management
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm mt-1">
-              Review candidates, shortlist profiles, and trigger interview pipeline updates
+              Review candidates, shortlist profiles, and select candidates for final placement
             </p>
           </div>
         </div>
@@ -109,7 +113,17 @@ export default function ApplicantManagementPage() {
                 : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
             }`}
           >
-            Shortlisted ({applicants.filter((a) => (a.status || '').toUpperCase() === 'SHORTLISTED' || (a.status || '').toUpperCase() === 'INTERVIEW').length})
+            Shortlisted ({applicants.filter((a) => (a.status || '').toUpperCase() === 'SHORTLISTED').length})
+          </button>
+          <button
+            onClick={() => setTabFilter('SELECTED')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+              tabFilter === 'SELECTED'
+                ? 'bg-brand-600 text-white shadow-sm'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800'
+            }`}
+          >
+            Selected Candidates ({applicants.filter((a) => (a.status || '').toUpperCase() === 'SELECTED' || (a.status || '').toUpperCase() === 'PLACED').length})
           </button>
           <button
             onClick={() => setTabFilter('ALL')}
@@ -185,7 +199,9 @@ export default function ApplicantManagementPage() {
                   const sDept = app.studentDept || app.studentId?.department || 'N/A';
                   const sCgpa = app.studentCgpa || app.studentId?.cgpa || 'N/A';
                   const jTitle = app.jobTitle || app.jobId?.title || 'Job';
-                  const isShortlisted = (app.status || '').toUpperCase() === 'SHORTLISTED' || (app.status || '').toUpperCase() === 'INTERVIEW';
+                  const statusUpper = (app.status || '').toUpperCase();
+                  const isSelected = statusUpper === 'SELECTED' || statusUpper === 'PLACED';
+                  const isShortlisted = statusUpper === 'SHORTLISTED';
 
                   return (
                     <tr key={app.id || app._id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
@@ -202,7 +218,9 @@ export default function ApplicantManagementPage() {
                       <td className="p-4">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
-                            isShortlisted
+                            isSelected
+                              ? 'bg-emerald-600 text-white'
+                              : isShortlisted
                               ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
                               : 'bg-brand-50 text-brand-600 border border-brand-200'
                           }`}
@@ -211,10 +229,22 @@ export default function ApplicantManagementPage() {
                         </span>
                       </td>
                       <td className="p-4 text-right space-x-2">
-                        {isShortlisted ? (
-                          <span className="px-3 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-200 inline-flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> Shortlisted
+                        {isSelected ? (
+                          <span className="px-3 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold shadow-sm inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" /> Selected
                           </span>
+                        ) : isShortlisted ? (
+                          <div className="inline-flex items-center gap-2">
+                            <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold border border-emerald-200 inline-flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Shortlisted
+                            </span>
+                            <button
+                              onClick={() => updateStatus(app.id || app._id, 'SELECTED')}
+                              className="px-3 py-1 rounded-lg bg-brand-600 text-white hover:bg-brand-700 font-bold text-[10px] shadow-sm flex-inline items-center gap-1 transition-all"
+                            >
+                              <Award className="w-3 h-3 inline mr-1" /> Select Candidate
+                            </button>
+                          </div>
                         ) : (
                           <>
                             <button
@@ -222,6 +252,12 @@ export default function ApplicantManagementPage() {
                               className="px-3 py-1 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-semibold text-[10px] shadow-sm transition-all"
                             >
                               Shortlist
+                            </button>
+                            <button
+                              onClick={() => updateStatus(app.id || app._id, 'SELECTED')}
+                              className="px-3 py-1 rounded-lg bg-brand-600 text-white hover:bg-brand-700 font-semibold text-[10px] shadow-sm transition-all"
+                            >
+                              Select
                             </button>
                             <button
                               onClick={() => updateStatus(app.id || app._id, 'REJECTED')}

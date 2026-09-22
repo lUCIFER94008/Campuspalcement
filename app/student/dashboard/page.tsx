@@ -6,16 +6,16 @@ import { Sidebar } from '@/components/sidebar';
 import {
   Briefcase,
   FileText,
-  Calendar,
+  CheckCircle2,
   Sparkles,
-  Award
+  Award,
+  ArrowRight
 } from 'lucide-react';
 
 export default function StudentDashboard() {
   const [student, setStudent] = useState<any>(null);
   const [jobs, setJobs] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
-  const [interviews, setInterviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,13 +23,11 @@ export default function StudentDashboard() {
       fetch('/api/students/profile').then((r) => r.json()),
       fetch('/api/jobs').then((r) => r.json()),
       fetch('/api/applications').then((r) => r.json()),
-      fetch('/api/interviews').then((r) => r.json()),
     ])
-      .then(([profRes, jobRes, appRes, intRes]) => {
+      .then(([profRes, jobRes, appRes]) => {
         if (profRes.success && profRes.student) setStudent(profRes.student);
         if (jobRes.success && jobRes.jobs) setJobs(jobRes.jobs);
         if (appRes.success && appRes.applications) setApplications(appRes.applications);
-        if (intRes.success && intRes.interviews) setInterviews(intRes.interviews);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -38,6 +36,18 @@ export default function StudentDashboard() {
   const studentName = student?.name || 'Student';
   const cgpaDisplay = student?.cgpa ? `${student.cgpa} CGPA` : 'Not added';
   const deptDisplay = student?.department || 'Not added';
+
+  // Determine overall selection status
+  const selectedApp = applications.find(
+    (a) => (a.status || '').toUpperCase() === 'SELECTED' || (a.status || '').toUpperCase() === 'PLACED'
+  );
+  const isSelected = !!selectedApp || (student?.placementStatus || '').toUpperCase() === 'PLACED';
+
+  const latestStatus = isSelected
+    ? 'SELECTED'
+    : applications.length > 0
+    ? (applications[0].status || 'APPLIED').toUpperCase()
+    : 'NOT APPLIED';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0B0D12] text-slate-900 dark:text-slate-100 flex">
@@ -51,7 +61,7 @@ export default function StudentDashboard() {
               Good morning, {studentName.split(' ')[0]} 👋
             </h1>
             <p className="text-slate-500 text-xs sm:text-sm mt-1">
-              Here's your real-time placement overview.
+              Here's your real-time campus placement overview.
             </p>
           </div>
 
@@ -87,32 +97,39 @@ export default function StudentDashboard() {
               {loading ? '...' : `${applications.length} Applied`}
             </p>
             <span className="text-[11px] text-slate-500 mt-1 block">
-              {applications.length > 0 ? 'Active Applications' : '0 applications submitted'}
+              {applications.length > 0 ? 'Active Submissions' : '0 applications submitted'}
             </span>
           </div>
 
+          {/* Selection Status Card */}
           <div className="p-5 rounded-card glass-panel shadow-sm">
             <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-              <span>Scheduled Interviews</span>
-              <Calendar className="w-4 h-4 text-brand-600" />
+              <span>Selection Status</span>
+              <CheckCircle2 className={`w-4 h-4 ${isSelected ? 'text-emerald-600' : 'text-brand-600'}`} />
             </div>
-            <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-              {loading ? '...' : `${interviews.length} Scheduled`}
-            </p>
+            <div className="mt-2 flex items-center gap-2">
+              <p
+                className={`text-2xl font-extrabold uppercase ${
+                  isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                }`}
+              >
+                {loading ? '...' : latestStatus}
+              </p>
+            </div>
             <span className="text-[11px] text-slate-500 mt-1 block">
-              {interviews.length > 0 ? 'Upcoming Round' : 'No interviews scheduled'}
+              {isSelected ? '✓ Official Selection Confirmed' : 'Campus recruitment stage'}
             </span>
           </div>
 
           <div className="p-5 rounded-card glass-panel shadow-sm">
             <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-              <span>Placement Status</span>
+              <span>Academic Criteria</span>
               <Award className="w-4 h-4 text-brand-600" />
             </div>
             <p className="text-lg font-bold text-brand-600 dark:text-brand-400 mt-2 truncate uppercase">
-              {student?.placementStatus || 'UNPLACED'}
+              {cgpaDisplay}
             </p>
-            <span className="text-[11px] text-slate-500 mt-1 block">Academic CGPA: {cgpaDisplay}</span>
+            <span className="text-[11px] text-slate-500 mt-1 block">Backlogs: {student?.backlogs ?? 0}</span>
           </div>
         </div>
 
@@ -139,7 +156,7 @@ export default function StudentDashboard() {
           </Link>
         </div>
 
-        {/* Opportunities Grid & Empty States */}
+        {/* Opportunities Grid & Placement Status Box */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
@@ -188,29 +205,41 @@ export default function StudentDashboard() {
             )}
           </div>
 
-          {/* Upcoming Interview Box */}
+          {/* Placement Status Summary Box */}
           <div className="space-y-4">
-            <h2 className="text-base font-bold text-slate-900 dark:text-white">Upcoming Interview</h2>
-            {interviews.length === 0 ? (
-              <div className="p-8 rounded-card glass-panel text-center text-slate-500 text-xs">
-                No interviews scheduled.
-              </div>
-            ) : (
-              <div className="p-6 rounded-card glass-panel shadow-sm space-y-4">
-                <div>
-                  <h4 className="font-bold text-slate-900 dark:text-white text-sm">
-                    {interviews[0].companyName || 'Company Round'}
-                  </h4>
-                  <p className="text-xs text-slate-500 mt-0.5">{interviews[0].roundName || 'Interview'}</p>
-                </div>
-                <Link
-                  href="/student/interviews"
-                  className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold flex items-center justify-center transition-all shadow-sm"
+            <h2 className="text-base font-bold text-slate-900 dark:text-white">Placement Summary</h2>
+            <div className="p-6 rounded-card glass-panel shadow-sm space-y-4 border border-slate-200/80 dark:border-slate-800">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400">Current Status</span>
+                <h4
+                  className={`text-lg font-extrabold mt-0.5 uppercase ${
+                    isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white'
+                  }`}
                 >
-                  View Schedule
+                  {isSelected ? '✓ SELECTED' : latestStatus}
+                </h4>
+                <p className="text-xs text-slate-500 mt-1">
+                  {isSelected
+                    ? `Congratulations! Selected for ${selectedApp?.jobTitle || selectedApp?.jobId?.title || 'Position'}.`
+                    : 'Track your application status and progress in real time.'}
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800 flex flex-col gap-2">
+                <Link
+                  href="/student/applications"
+                  className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+                >
+                  View My Applications <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <Link
+                  href="/student/status"
+                  className="w-full py-2.5 rounded-xl bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center justify-center border border-slate-200 dark:border-slate-700 hover:bg-slate-50 transition-all"
+                >
+                  Placement Record
                 </Link>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </main>

@@ -48,7 +48,6 @@ export function Sidebar({ role, userName = 'User', userEmail = '', userAvatar }:
     { label: 'My Profile', href: '/student/profile', icon: User },
     { label: 'Find Jobs', href: '/student/jobs', icon: Search },
     { label: 'My Applications', href: '/student/applications', icon: FileText },
-    { label: 'Interviews', href: '/student/interviews', icon: Calendar },
     { label: 'Resume', href: '/student/resume', icon: Sparkles },
     { label: 'Notifications', href: '/student/notifications', icon: Bell },
     { label: 'Placement Status', href: '/student/status', icon: CheckCircle2 },
